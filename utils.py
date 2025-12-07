@@ -1,7 +1,7 @@
-# utils.py
+# MusicAndMath/utils.py
 import random
 from midiutil import MIDIFile
-import config  # 导入配置
+import config
 
 def generate_random_melody(length=config.TOTAL_STEPS):
     """根据配置生成随机基因"""
@@ -69,3 +69,66 @@ def save_melody_to_midi(melody, filename="output.mid", tempo=80):
     with open(filename, "wb") as f:
         MyMIDI.writeFile(f)
     print(f"Saved MIDI to: {filename}")
+
+def save_movement_to_midi(movement_melody, filename="movement_full.mid", tempo=80, chord_progression=None):
+    """
+    保存完整乐章 (优化版)
+    :param chord_progression: 可选，允许传入自定义的和弦走向列表，否则使用 config 默认值
+    """
+    track = 0
+    channel_melody = 0
+    channel_chord = 1
+    volume = 100
+    step_duration = 1.0 / config.STEPS_PER_BEAT 
+    
+    MyMIDI = MIDIFile(1) 
+    MyMIDI.addTempo(track, 0, tempo)
+    
+    # 1. 写入旋律 (使用动态时值合并逻辑)
+    if len(movement_melody) > 0:
+        current_pitch = movement_melody[0]
+        current_length = 1
+        current_start = 0
+    
+        for i in range(1, len(movement_melody)):
+            note = movement_melody[i]
+            if note == current_pitch and note != 0:
+                current_length += 1
+            else:
+                if current_pitch != 0:
+                    MyMIDI.addNote(track, channel_melody, current_pitch, 
+                                   current_start * step_duration, 
+                                   current_length * step_duration, volume)
+                current_pitch = note
+                current_length = 1
+                current_start = i
+        # 最后一个音
+        if current_pitch != 0:
+            MyMIDI.addNote(track, channel_melody, current_pitch, 
+                           current_start * step_duration, 
+                           current_length * step_duration, volume)
+            
+    # 2. 铺设和弦
+    # 使用传入的 progression 或者 config 默认的
+    progression = chord_progression if chord_progression else config.CHORD_ROOTS
+    
+    # 计算总共有多少拍
+    total_beats = len(movement_melody) / config.STEPS_PER_BEAT
+    
+    current_beat = 0
+    prog_idx = 0
+    
+    while current_beat < total_beats:
+        root = progression[prog_idx % len(progression)]
+        
+        # 简单的三和弦铺底
+        MyMIDI.addNote(track, channel_chord, root, current_beat, config.CHORD_DURATION, 65)
+        MyMIDI.addNote(track, channel_chord, root+4, current_beat, config.CHORD_DURATION, 65)
+        MyMIDI.addNote(track, channel_chord, root+7, current_beat, config.CHORD_DURATION, 65)
+        
+        current_beat += config.CHORD_DURATION
+        prog_idx += 1
+
+    with open(filename, "wb") as f:
+        MyMIDI.writeFile(f)
+    print(f"Movement saved to: {filename} (Total steps: {len(movement_melody)})")
