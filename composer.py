@@ -4,12 +4,8 @@ import utils
 import config
 
 def generate_symphony():
-    print("========================================")
     print(" AI Composer: Starting Symphony Generation")
     print(" Structure: A (Theme) -> A' (Var) -> B (Contrast) -> A (Coda)")
-    print("========================================")
-    
-    # 询问用户是否要自定义全局和弦
     print("\n【全局设置】是否自定义 Theme A 的和弦走向?")
     chord_roots_A = get_user_chord_progression()
     
@@ -17,8 +13,8 @@ def generate_symphony():
     if chord_roots_A:
         override_A['CHORD_ROOTS'] = chord_roots_A
 
-    engine_standard = GAEngine(target_gens=300) 
-    engine_creative = GAEngine(target_gens=200, mutation_rate=0.1) 
+    engine_standard = GAEngine(target_gens=500) 
+    engine_creative = GAEngine(target_gens=500, mutation_rate=0.1) 
 
     # --- 1. Theme A ---
     print("\n[Section 1] Composing Theme A...")
