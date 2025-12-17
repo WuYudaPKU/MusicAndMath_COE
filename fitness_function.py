@@ -1,187 +1,152 @@
-# fitness_function.py
+# MusicAndMath/fitness_function.py
 import config
 
-
-# 1. 静态常量 (CONSTANTS)
+# 1. 静态常量
 SCALE_C_MAJOR = {0, 2, 4, 5, 7, 9, 11}
-CHORDS = [
-    {0, 4, 7},      # Bar 0: C
-    {7, 11, 2},     # Bar 1: G
-    {9, 0, 4},      # Bar 2: Am
-    {5, 9, 0}       # Bar 3: F
-]
 
 # 律动模版
 GROOVE_TEMPLATES = {
-    # --- 基础稳重型 (Base) ---
-    # [标准8分音符] 适合作为背景铺垫
-    (1, 0, 1, 0, 1, 0, 1, 0): 10,   
-    # [四分音符] 稳健的步伐 (1, 3拍)
-    (1, 0, 0, 0, 1, 0, 0, 0): 10,   
+    # --- 基础节奏 (Basic) ---
+    (1, 0, 1, 0, 1, 0, 1, 0): 10,  # 标准四分音符 (稳重)
+    (1, 0, 0, 0, 1, 0, 0, 0): 5,   # 二分音符 (空灵)
+    (1, 0, 1, 0, 1, 0, 0, 0): 10,  # 前紧后松
+    (1, 0, 0, 0, 1, 0, 1, 0): 10,  # 前松后紧 (推进感)
+    (1, 1, 1, 1, 1, 1, 1, 1): 4,   # 密集八分音符 (能量强，但易单调)
 
-    # --- 流行与摇滚 (Pop/Rock) ---
-    # [向前推动] 强调第4拍的反拍 (Push)，制造期待感
-    (1, 0, 1, 0, 1, 0, 0, 1): 10, 
-    # [切分摇滚]
-    (1, 0, 0, 1, 0, 1, 0, 0): 10,
+    # --- 经典流行/切分 (Pop & Syncopation) ---
+    (1, 0, 0, 1, 0, 0, 1, 0): 15,  # [强烈推荐] Tresillo 节奏 (3+3+2)，Reggaeton/Pop 核心
+    (1, 0, 0, 1, 0, 0, 0, 0): 15,  # Charleston 变体 (前半部分)
+    (1, 0, 1, 0, 1, 0, 0, 1): 15,  # 你的模版：最后切分抢拍 (Anticipation)
+    (1, 0, 0, 1, 1, 0, 1, 0): 15,  # 你的模版：中间切分
 
-    # 拉丁与舞曲 (Latin/Dance)
-    # [Tresillo] (3-3-2) 雷鬼、Reggaeton、Hiphop
-    # 这种节奏打破了4/4拍的对称性，极具动感
-    (1, 0, 0, 1, 0, 0, 1, 0): 10,  
-    
-    # [Habanera / Tango] 哈巴涅拉，卡门的节奏
-    # 在 Tresillo 的基础上多了一个切分音
-    (1, 0, 0, 1, 1, 0, 1, 0): 10,  
+    # --- 摇滚/驱动 (Rock/Driving) ---
+    (1, 0, 1, 1, 1, 0, 1, 0): 12,  # 带有驱动力的摇滚节奏
+    (1, 0, 1, 1, 0, 1, 0, 0): 12,  # 经典切分驱动
+    (1, 0, 1, 0, 1, 1, 1, 0): 12,  # 结尾推动
 
-    # [Cinquillo] (2-1-2-1-2) 古巴音乐核心
-    # 非常紧凑，适合高潮部分
-    (1, 0, 1, 1, 0, 1, 1, 0): 10,  
+    # --- 放克/律动 (Funk/Groove) ---
+    (1, 0, 1, 1, 0, 1, 1, 0): 18,  # Funky 切分
+    (1, 1, 0, 1, 0, 1, 0, 0): 15,  # 16分音符感觉的错位 (假设速度较慢时)
+    (1, 0, 0, 0, 1, 1, 0, 1): 15,  # 后半拍活跃
 
-    # --- 爵士与摇摆 (Jazz/Swing Feel)
-    # [Charleston] 查尔斯顿节奏
-    # 20年代摇摆乐经典
-    (1, 0, 0, 1, 0, 0, 0, 0): 10,
-    
-    # [Syncopated Jazz] 连续的反拍切分
-    (0, 1, 0, 1, 0, 1, 0, 1): 10,
-
-    # 史诗与叙事 (Epic/Cinematic)
-    # 适合静谧的开头
-    (1, 0, 1, 0, 0, 0, 0, 0): 10,
-    
-    # [Gallop] 骑马节奏 (Iron Maiden 风格)
-    (1, 1, 0, 1, 1, 0, 1, 0): 10,
+    (1, 0, 1, 1, 1, 1, 0, 0): 10,
+    (1, 0, 1, 1, 0, 0, 1, 0): 10,
+    (1, 0, 1, 1, 1, 1, 1, 0): 5,
+    (1, 0, 1, 1, 1, 0, 0, 0): 10,
+    (1, 1, 0, 1, 1, 0, 1, 0): 15,
 }
+def get_dynamic_chords():
+    """
+    根据 config.CHORD_ROOTS 动态构建每一小节的和弦组成音。
+    自动构建 C 大调顺阶三和弦。
+    """
+    chords = []
+    for root in config.CHORD_ROOTS:
+        root_pc = root % 12
+        # C大调顺阶构建逻辑
+        # C(0), D(2), E(4), F(5), G(7), A(9), B(11)
+        # 对应音阶索引: 0, 1, 2, 3, 4, 5, 6
+        scale_indices = [0, 2, 4, 5, 7, 9, 11]
+        
+        if root_pc in scale_indices:
+            idx = scale_indices.index(root_pc)
+            # 取 1, 3, 5 度 (在音阶列表中的索引分别是 idx, idx+2, idx+4)
+            # 注意循环取模
+            note1 = scale_indices[idx]
+            note2 = scale_indices[(idx + 2) % 7]
+            note3 = scale_indices[(idx + 4) % 7]
+            chords.append({note1, note2, note3})
+        else:
+            # 如果根音不在调内，默认给个大三和弦兜底
+            chords.append({root_pc, (root_pc+4)%12, (root_pc+7)%12})
+    return chords
 
-# 2. 核心预处理
+# 2. 核心预处理 (保持不变)
 def analyze_melody(melody):
-    """
-    将原始旋律数组解构为两个独立的视图：
-    1. events: 纯音符序列 [(index, pitch), ...] -> 用于评估旋律连贯性
-    2. bars:   小节切片 -> 用于评估节奏律动
-    """
     steps_per_bar = config.BEATS_PER_BAR * config.STEPS_PER_BEAT
-    
-    # 视图1：音符事件链 (Melody Chain)
-    # 过滤掉所有的 0，只保留 (时间点, 音高)
-    # 这样，events[i] 的下一个音永远是 events[i+1]，无论中间隔了多少延音
     events = [(i, n) for i, n in enumerate(melody) if n > 0]
-    
-    # 视图2：小节切片 (Rhythm Grid)
     bars = [melody[i:i+steps_per_bar] for i in range(0, len(melody), steps_per_bar)]
-    
     return events, bars, steps_per_bar
 
-
-# 3. 旋律层 (只看 events)
+# 3. 旋律层 (微调：使用 dynamic chords)
 def fit_melodic_flow(events):
-    """
-    评估旋律的横向连贯性 (Interval, Gap Fill, Inertia, Resolution)
-    完全忽略延音的影响。
-    """
     if len(events) < 2: return 0
     score = 0
-    
-    # 提取纯音高列表用于计算
     pitches = [e[1] for e in events]
     
-    # 使用 zip 遍历：(当前音, 下个音)
-    # 这里的 next_pitch 绝对是下一个发声的音，哪怕隔了3拍
+    # 获取当前和弦列表
+    current_chords = get_dynamic_chords()
+    num_bars = len(current_chords)
+    
     for i in range(len(pitches) - 1):
         curr_p = pitches[i]
         next_p = pitches[i+1]
-        
-        # 1. 音程 (Interval)
         interval = abs(next_p - curr_p)
-        if interval <= 2: score += 5       # 级进
-        elif interval <= 4: score += 2     # 小跳
-        elif interval > 7: score -= 10      # 大跳
-        elif interval > 12: score -= 20    # 只有人声不能唱的跨度才重罚
+        if interval <= 2: score += 5       
+        elif interval <= 4: score += 2     
+        elif interval > 7: score -= 10      
+        elif interval > 12: score -= 20    
         
-        # 2. 惯性与大跳补偿 (Gap Fill & Inertia)
-        # 需要看三个音
+        # 惯性检查 (保持不变)
         if i < len(pitches) - 2:
             next_next_p = pitches[i+2]
             d1 = next_p - curr_p
             d2 = next_next_p - next_p
-            
-            # 大跳(>5)后必须反向
             if abs(d1) > 5:
                 if d1 * d2 < 0 or d2 == 0: score += 10
                 else: score -= 5
-            # 小跳同向奖励
             elif abs(d1) <= 4 and abs(d2) <= 4 and d1 * d2 > 0:
                 score += 5
 
-    # 3. 张力解决 (Tension & Resolution)
-    # events 列表里，next_p 就是下一个真实的音
+    # 张力解决
     steps_per_bar = config.BEATS_PER_BAR * config.STEPS_PER_BEAT
-    
     for i in range(len(events) - 1):
         curr_idx, curr_p = events[i]
-        next_idx, next_p = events[i+1] # 拿到下一个真实音及其位置
+        next_idx, next_p = events[i+1]
         
-        # 计算当前时刻的和弦
-        curr_chord_idx = (curr_idx // steps_per_bar) % 4
-        curr_chord = CHORDS[curr_chord_idx]
+        curr_bar_idx = (curr_idx // steps_per_bar) % num_bars
+        curr_chord = current_chords[curr_bar_idx]
         
-        # 如果当前是离调音 (非和弦音)
         if (curr_p % 12) not in curr_chord:
-            # 检查是否解决到了下一个音
-            next_chord_idx = (next_idx // steps_per_bar) % 4 # 注意：和弦要查下一个音发生时的和弦
-            next_chord = CHORDS[next_chord_idx]
-            
-            # 解决条件：级进移动(<=2) 且 进入和弦内
+            next_bar_idx = (next_idx // steps_per_bar) % num_bars
+            next_chord = current_chords[next_bar_idx]
             if abs(next_p - curr_p) <= 2 and (next_p % 12) in next_chord:
-                score += 30 # 巨大的奖励，鼓励这种人性化的写法
-
+                score += 30 
     return score
 
-
-# 4. 节奏与和声层 (看 events + Grid)
+# 4. 节奏与和声层
 def fit_harmonic_quality(events, steps_per_beat=2):
-    """
-    评估纵向和声。
-    只评估 Onset (起奏点)，延音不扣分也不加分。
-    """
     score = 0
     steps_per_bar = config.BEATS_PER_BAR * steps_per_beat
     
+    # 动态获取和弦
+    current_chords = get_dynamic_chords()
+    num_bars = len(current_chords)
+    
     for idx, pitch in events:
-        # 确定当时和弦
-        bar_idx = (idx // steps_per_bar) % 4
-        chord = CHORDS[bar_idx]
+        bar_idx = (idx // steps_per_bar) % num_bars
+        chord = current_chords[bar_idx]
         pc = pitch % 12
-        
-        # 强拍定义
         is_strong_beat = (idx % steps_per_beat == 0)
         
         if pc in chord:
             score += 10 if is_strong_beat else 5
         elif pc in SCALE_C_MAJOR:
-            # 宽容处理：只要在调内，虽然不是和弦音，稍微扣一点点即可
-            # 因为如果是离调解决，fit_melodic_flow 会把分加回来的
             score -= 2 
         else:
-            score -= 30 # 调外音还是得罚
-            
+            score -= 30 
     return score
 
+# 5. 节奏律动 (保持不变)
 def fit_rhythm_groove(bars):
-    """
-    增强版节奏评分：支持模版匹配、循环移位变体检测。
-    """
     score = 0
-    # 将模版转换为集合，方便快速查找
-    # 我们只存 key (pattern)，value (score) 在查的时候再取
-    template_keys = set(GROOVE_TEMPLATES.keys())
+    # 确保只使用强拍开始的模版（请确认 GROOVE_TEMPLATES 里没有以 0 开头的模版）
     
     for bar_segment in bars:
-        # 1. 提取当前小节的节奏型
         rhythm = []
         for i, n in enumerate(bar_segment):
             is_onset = False
+            # 逻辑：只要是音符(>0)，且跟前一个不同(或是第一拍)，就算起音
             if n > 0:
                 if i == 0: is_onset = True
                 elif n != bar_segment[i-1]: is_onset = True
@@ -189,65 +154,35 @@ def fit_rhythm_groove(bars):
         
         rhythm_tuple = tuple(rhythm)
         
-        # --- 评分逻辑 ---
-        
-        # A. 完美匹配 (Perfect Match)
+        # --- 修改 1：严格匹配，删除原有的 shift 循环 ---
         if rhythm_tuple in GROOVE_TEMPLATES:
             score += GROOVE_TEMPLATES[rhythm_tuple]
-            
         else:
-            # B. 变体匹配 (Shifted Match)
-            # 检查是否是某个名模版的“移位版本”
-            # 例如：Tresillo 晚了一拍开始，依然很有律动感
-            found_shift = False
-            shifted = list(rhythm_tuple)
-            
-            # 尝试左移/右移 1-2 位
-            for _ in range(len(shifted)):
-                # 循环移位: [1, 0, 1] -> [0, 1, 1]
-                shifted = shifted[-1:] + shifted[:-1] 
-                shifted_tuple = tuple(shifted)
-                
-                if shifted_tuple in GROOVE_TEMPLATES:
-                    # 这是一个“移位”的经典节奏
-                    # 给分，但比原版稍微低一点
-                    base_score = GROOVE_TEMPLATES[shifted_tuple]
-                    score += base_score * 0.6 
-                    found_shift = True
-                    break
-            
-            if not found_shift:
-                # C. 兜底惩罚
-                # 如果既不是模版，也不是模版的变体，可能是杂乱的随机节奏
-                # 只有当节奏点太碎时才惩罚
-                onsets = sum(rhythm)
-                if onsets > 5: score -= 5 # 太乱
-                if onsets <= 1: score -= 5 # 太空
+            # 没对上模版，检查是否太稀疏
+            onsets = sum(rhythm)
+            if onsets > 6: score -= 5 
+            if onsets <= 1: score -= 10
 
+        # --- 修改 2：死刑判决 ---
+        # 只要这一小节的第一拍是休止符，无论后面多好，直接重罚
+        if rhythm[0] == 0:
+            score -= 50  # 扣分力度要大，让它在进化中直接被淘汰
     return score
 
-
-# 5. 结构层 (Macro)
+# 6. 结构层 (保持不变)
 def fit_structure_coherence(events, bars):
-    """结构完整性"""
     if not events: return -100
     score = 0
-    
-    # 1. 终止式 (只看最后一个 Event)
     last_idx, last_pitch = events[-1]
-    if last_pitch % 12 == 0: score += 20     # 回主音
-    elif last_pitch % 12 in {7, 11}: score += 5 # 属音半终止
+    if last_pitch % 12 == 0: score += 20     
+    elif last_pitch % 12 in {7, 11}: score += 5 
     
-    # 2. 问答结构 (Bar 2 结束音)
-    # 找到第2小节内的最后一个 Event
     steps_per_bar = config.BEATS_PER_BAR * config.STEPS_PER_BEAT
     mid_events = [e for e in events if steps_per_bar <= e[0] < 2*steps_per_bar]
     if mid_events:
         mid_pitch = mid_events[-1][1]
-        if mid_pitch % 12 in {2, 7, 11}: score += 15 # 悬念
+        if mid_pitch % 12 in {2, 7, 11}: score += 15 
         
-    # 3. 动机重复 (Rhythm Motif)
-    # 对比 Bar 0 和 Bar 2 的 Onset 模式
     if len(bars) >= 3:
         def get_onset_pattern(segment):
             res = []
@@ -255,40 +190,90 @@ def fit_structure_coherence(events, bars):
                 is_onset = (n > 0) and (i==0 or n != segment[i-1])
                 res.append(1 if is_onset else 0)
             return res
-            
         r0 = get_onset_pattern(bars[0])
         r2 = get_onset_pattern(bars[2])
         if r0 == r2: score += 15
         elif sum(1 for a,b in zip(r0,r2) if a==b) >= len(r0)*0.75: score += 10
-        
     return score
 
+def fit_beat_stability(melody):
+    """
+    新增：节奏稳定性控制
+    1. 强拍必须有声
+    2. 抑制反拍起音
+    3. 鼓励适当延音
+    """
+    score = 0
+    steps_per_bar = config.BEATS_PER_BAR * config.STEPS_PER_BEAT # 通常为8
+    
+    # --- A. 密度与延音检测 ---
+    changes = 0
+    for i in range(1, len(melody)):
+        # 只要当前格与前一格不同（换音或变休止），就算一次变化
+        if melody[i] != melody[i-1]:
+            changes += 1
+    
+    # 计算密度 (0.0 - 1.0)
+    density = changes / len(melody)
+    
+    # 期望密度：不要太碎，也不要死水一潭
+    if density > 0.5: 
+        score -= 6 # 扣分：变化太频繁，缺乏延音
+    elif density < 0.1:
+        score -= 6  # 扣分：太长不动
+    else:
+        score += 7 # 奖励：适中的延音（density 0.1~0.5）
 
-# 6. 总控
+    # --- B. 强拍与反拍检查 ---
+    for i, note in enumerate(melody):
+        step_in_bar = i % steps_per_bar
+        if step_in_bar == 0: # 只针对每小节第1拍（Downbeat）
+            if note == 0:score -= 100 # 重罚：强拍是休止符
+            else:
+                # 检查是否是“起音”（Onset）：
+                # 1. 如果是全曲第1个音 (i==0)，当然是起音
+                # 2. 如果当前音与前一个音不同 (note != melody[i-1])，说明是新敲击的音
+                # 3. 注意：如果前一个音是休止符(0)，当前是音符，那肯定也是起音，包含在!=逻辑里了
+                is_onset = (i == 0) or (note != melody[i-1])
+                
+                if is_onset:score += 20  # 奖励：强拍有力地敲下去了
+                else:score -= 20  # 惩罚：强拍是拖过来的延音，没有力度
+
+        elif step_in_bar == 4:
+            if note == 0:
+                score -= 20 # 次强拍惩罚稍微轻一点
+            # 次强拍通常允许延音，所以这里可以不强制要求起音
+
+        # [反拍抑制]
+        # 假设 STEPS_PER_BEAT=2，奇数位置(1, 3, 5...)是反拍
+        if i % 2 != 0:
+            # 检查是否是“起音点”
+            # 起音定义：当前是音符，且与前一个状态不同
+            is_onset = (note > 0) and (i == 0 or note != melody[i-1])
+            
+            if is_onset:
+                score -= 15 # 扣分：反拍起音（听感不稳定）
+
+    return score
+
+# 7. 总控 (保持不变)
 def get_fitness(melody):
     if sum(melody) == 0: return -9999
-    
-    # 1. 预处理 (一次性完成)
     events, bars, _ = analyze_melody(melody)
     if not events: return -999
     
-    # 2. 计算各层分数
-    # 现在的 events 已经跳过了所有的延音(0)
-    # 所以 Melodic Flow 不会因为节奏稀疏而受到影响
     s_melody    = fit_melodic_flow(events)
     s_harmony   = fit_harmonic_quality(events)
     s_rhythm    = fit_rhythm_groove(bars)
     s_structure = fit_structure_coherence(events, bars)
     
-    # 3. 归一化/平衡
-    # 如果音符很少，sum求和的分数会天然偏低。
-    # 我们不仅要看总分，还要看“平均质量”。
-    # 但为了简单起见，我们给 s_melody 一个基于音符数量的补偿，或者调整权重。
+    # 新增稳定性评分
+    s_stability = fit_beat_stability(melody)
     
-    # 这里采用“加权求和”，权重根据经验微调
-    total = (3.0 * s_melody) + \
+    # 调整权重：大幅提升 Rhythm 和 Stability 的比重
+    total = (2.0 * s_melody) + \
             (3.0 * s_harmony) + \
-            (8.0 * s_rhythm) + \
-            (3.0 * s_structure)
-            
+            (4.0 * s_rhythm) + \
+            (2.1 * s_stability) + \
+            (2.0 * s_structure)
     return total
