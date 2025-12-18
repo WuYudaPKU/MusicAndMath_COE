@@ -74,24 +74,37 @@ def save_melody_to_midi(melody, filename="output.mid", tempo=80):
         current_length = 1
         current_start = 0
     
-        for i in range(1, len(melody)):
-            note = melody[i]
-            if note == current_pitch and note != 0:
-                current_length += 1
-            else:
-                if current_pitch != 0:
-                    MyMIDI.addNote(track, channel_melody, current_pitch, 
-                                   current_start * step_duration, 
-                                   current_length * step_duration, volume)
-                current_pitch = note
-                current_length = 1
+    for i in range(1, len(melody)):
+        note = melody[i]
+        if note == current_pitch and note != 0:
+            # 相同音高时，根据概率判断是否拆分（30%概率拆分，70%概率合并）
+            if random.random() < 0.3:  # 增加拆分概率
+                # 强制拆分：写入当前累积的音符
+                MyMIDI.addNote(
+                    track, channel_melody, current_pitch,
+                    current_start * step_duration,
+                    current_length * step_duration, volume
+                )
+                # 重置计数器，从当前位置开始新的音符
                 current_start = i
-                
-        # 写入最后一个音
-        if current_pitch != 0:
-            MyMIDI.addNote(track, channel_melody, current_pitch, 
-                           current_start * step_duration, 
-                           current_length * step_duration, volume)
+                current_length = 1
+            else:
+                # 不拆分：继续累积长度
+                current_length += 1
+        else:
+            if current_pitch != 0:
+                MyMIDI.addNote(track, channel_melody, current_pitch, 
+                               current_start * step_duration, 
+                               current_length * step_duration, volume)
+            current_pitch = note
+            current_length = 1
+            current_start = i
+            
+    # 写入最后一个音
+    if current_pitch != 0:
+        MyMIDI.addNote(track, channel_melody, current_pitch, 
+                       current_start * step_duration, 
+                       current_length * step_duration, volume)
             
     # --- 2. 写入背景和弦 (读取当前 config) ---
     for i, root in enumerate(config.CHORD_ROOTS):
@@ -131,7 +144,7 @@ def save_movement_to_midi(movement_melody, filename="movement_full.mid", tempo=8
     MyMIDI = MIDIFile(1) 
     MyMIDI.addTempo(track, 0, tempo)
     
-    # 1. 写入旋律
+    # 1. 写入旋律 - 增加拆分概率逻辑
     if len(movement_melody) > 0:
         current_pitch = movement_melody[0]
         current_length = 1
@@ -140,7 +153,18 @@ def save_movement_to_midi(movement_melody, filename="movement_full.mid", tempo=8
         for i in range(1, len(movement_melody)):
             note = movement_melody[i]
             if note == current_pitch and note != 0:
-                current_length += 1
+                # 相同音高时，30%概率拆分，70%概率合并
+                if random.random() < 0.3:
+                    # 拆分当前音符
+                    MyMIDI.addNote(track, channel_melody, current_pitch, 
+                                   current_start * step_duration, 
+                                   current_length * step_duration, volume)
+                    # 开始新的音符计数
+                    current_start = i
+                    current_length = 1
+                else:
+                    # 继续合并
+                    current_length += 1
             else:
                 if current_pitch != 0:
                     MyMIDI.addNote(track, channel_melody, current_pitch, 
