@@ -2,7 +2,7 @@
 import random
 import config
 import utils
-from fitness_function import get_fitness 
+from fitness_function import get_fitness
 
 def op_micro_adjust(melody):
     """微调：上下移动 1-2 个半音"""
@@ -113,16 +113,16 @@ class GAEngine:
         if random.random() > rate: return melody
         new_melody = melody[:] 
         
-        # 定义变异策略池及其权重 (新增移调和平滑)
+        # 定义变异策略池及其权重
         strategies = [
             (op_micro_adjust,     0.30), 
-            (op_transpose,        0.10), # 新增：移调
-            (op_smooth_contour,   0.10), # 新增：去锯齿
+            (op_transpose,        0.10), # 移调
+            (op_smooth_contour,   0.10), # 去锯齿
             (op_shadow_echo,      0.15), 
             (op_rhythm_clone,     0.10), 
             (op_retrograde_segment, 0.05),
             (op_inversion_segment,  0.05),
-            (utils.generate_random_melody, 0.15) # 重置 (现在使用了更好的 Random Walk)
+            (utils.generate_random_melody, 0.15) # 重置
         ]
         
         r = random.random()
@@ -147,7 +147,7 @@ class GAEngine:
                     print(f"  [Config Override] Set {k} = {v}")
 
         try:
-            # 2. 初始化种群 (utils.generate_random_melody 现在已经优化了)
+            # 2. 初始化种群
             if initial_seed:
                 population = [self.mutate_dispatcher(initial_seed[:], 0.2) for _ in range(self.pop_size)]
                 print(f"  [Init] Pop initialized from Seed.")
@@ -178,7 +178,7 @@ class GAEngine:
                     
                 # 灾难机制
                 if stats['stag_count'] > 50:
-                    print(f"  >>> [灭绝] Gen {gen}: 重置种群...")
+                    print(f"[灭绝] Gen {gen}: 重置种群。")
                     survivors = [p[1] for p in scored_pop[:5]] 
                     new_blood = [utils.generate_random_melody() for _ in range(self.pop_size - 5)]
                     population = survivors + new_blood
@@ -212,7 +212,7 @@ class GAEngine:
 
 
 def get_user_chord_progression():
-    """获取用户输入的和弦走向"""
+    """获取输入的和弦走向"""
     print("\n请输入和弦走向 MIDI 根音 (以逗号分隔，默认: 48, 43, 45, 41)")
     print("参考: C3=48, D3=50, E3=52, F3=53, G3=55, A3=57, B3=59")
     user_input = input("Chords > ").strip()
@@ -237,9 +237,9 @@ if __name__ == "__main__":
     if user_chords:
         constraints['CHORD_ROOTS'] = user_chords
         # 还要调整时长，防止和弦数和旋律长度不匹配
-        # 这里简单假设用户知道自己在做什么，或者 config 足够长
+        # 这里简单假设 config 足够长
         print(f"使用自定义和弦: {user_chords}")
     
-    engine = GAEngine(target_gens=200) # 演示用200代
+    engine = GAEngine(target_gens=500) # 演示用500代
     final_melody = engine.train(constraints_override=constraints)
     utils.save_melody_to_midi(final_melody, "music.mid")

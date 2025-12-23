@@ -24,7 +24,7 @@ def generate_random_melody(length=config.TOTAL_STEPS):
     current_pitch = random.choice(start_candidates)
     
     for i in range(length):
-        # --- 修改点：强制第一拍发声 ---
+        # 强制第一拍发声
         # 如果是第 0 个音（全曲第一拍），强制不休止
         if i % 8 == 0:  # 强制每一小节的第一拍发声
             should_rest = False
@@ -34,7 +34,6 @@ def generate_random_melody(length=config.TOTAL_STEPS):
         if should_rest:
             melody.append(0)
         else:
-            # ... (保持原有的随机游走逻辑不变) ...
             try:
                 curr_idx = scale_notes.index(current_pitch)
             except ValueError:
@@ -68,7 +67,7 @@ def save_melody_to_midi(melody, filename="output.mid", tempo=80):
     MyMIDI = MIDIFile(1) 
     MyMIDI.addTempo(track, time, tempo)
     
-    # --- 1. 旋律写入 ---
+    # 1. 旋律写入
     if len(melody) > 0:
         current_pitch = melody[0]
         current_length = 1
@@ -106,7 +105,7 @@ def save_melody_to_midi(melody, filename="output.mid", tempo=80):
                        current_start * step_duration, 
                        current_length * step_duration, volume)
             
-    # --- 2. 写入背景和弦 (读取当前 config) ---
+    # 2. 写入背景和弦 (读取当前 config)
     for i, root in enumerate(config.CHORD_ROOTS):
         start_time = i * config.CHORD_DURATION
         # 简单的三和弦铺底

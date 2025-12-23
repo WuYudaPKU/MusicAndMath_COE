@@ -16,17 +16,17 @@ def generate_symphony():
     engine_standard = GAEngine(target_gens=500) 
     engine_creative = GAEngine(target_gens=500, mutation_rate=0.1) 
 
-    # --- 1. Theme A ---
+    # 1. Theme A
     print("\n[Section 1] Composing Theme A...")
     theme_a = engine_standard.train(constraints_override=override_A)
 
-    # --- 2. Variation A' ---
+    # 2. Variation A'
     print("\n[Section 2] Composing Variation A'...")
     engine_short = GAEngine(target_gens=50)
     # A' 继承 A 的和弦配置
     theme_a_prime = engine_short.train(initial_seed=theme_a, constraints_override=override_A)
 
-    # --- 3. Theme B ---
+    # 3. Theme B
     print("\n[Section 3] Composing Theme B (Contrast)...")
     print("是否为 B 段自定义和弦? (回车跳过则使用默认)")
     chord_roots_B = get_user_chord_progression()
@@ -41,11 +41,11 @@ def generate_symphony():
         
     theme_b = engine_creative.train(constraints_override=override_B)
 
-    # --- 4. Coda ---
+    # 4. Coda
     print("\n[Section 4] Assembly Coda...")
     theme_a_coda = theme_a 
 
-    # --- 5. 组装 ---
+    # 5. 组装
     full_movement = []
     full_movement.extend(theme_a)
     full_movement.extend(theme_a_prime)
