@@ -1,11 +1,9 @@
 # config.py
 
 NUM_BARS = 4            # 【生成长度】旋律包含的小节数。4小节是典型的乐句长度。
-BEATS_PER_BAR = 4       # 【拍号】每小节几拍。4代表 4/4 拍，这是最常见的流行音乐拍号。
+BEATS_PER_BAR = 4       # 【拍号】每小节几拍。4代表 4/4 拍，
 STEPS_PER_BEAT = 2      # 【时间精度】每拍被切分成几份。2 代表最小单位是八分音符。
-                        # 注意：如果此处改为4，则最小单位是十六分音符。
 
-# 计算公式：小节数 * 每小节拍数 * 每拍切片数
 TOTAL_STEPS = NUM_BARS * BEATS_PER_BAR * STEPS_PER_BEAT 
 
 
@@ -16,7 +14,7 @@ PITCH_MAX = 84
 
 # 【稀疏度】生成休止符（0）的概率。
 # 0.3 表示约 30% 的时间是静音的。
-# 调小该值：旋律更紧凑、密集。
+# 调大该值：旋律更空灵、呼吸感更强；调小该值：旋律更紧凑、密集。
 REST_PROB = 0.3
 
 
@@ -24,7 +22,7 @@ REST_PROB = 0.3
 POPULATION_SIZE = 1000  
 
 # 【迭代次数】进化的总轮数。
-GENERATIONS = 500       
+GENERATIONS = 200       
 
 # 【基础变异率】基因突变的概率。
 # 0.05 (5%) 代表在通过交叉产生后代后，每个音符有 5% 的概率随机变成其他音。
@@ -42,6 +40,10 @@ CHORD_ROOTS = [48, 43, 45, 41]
 # 4 代表每个和弦占满 1 个小节（全音符长度）。
 CHORD_DURATION = 4 
 
-# 【C大调音阶集合】用于变异算子(main.py)和适应度计算
+# 【C大调音阶集合】用于变异算子和适应度计算
 # Pitch Classes: 0=C, 2=D, 4=E, 5=F, 7=G, 9=A, 11=B
 SCALE_C_MAJOR = {0, 2, 4, 5, 7, 9, 11}
+
+USE_NN_FITNESS = True
+NN_MODEL_PATH = "lmd_eval.pth"
+VOCAB_SIZE = 130
